@@ -57,6 +57,16 @@ export function formatDuration(seconds: string | number | null): string | null {
   return `${minutes}:${String(rest).padStart(2, '0')}`;
 }
 
+/**
+ * Dia local de um instante, como "2026-10-13". É a chave usada para juntar as
+ * mídias soltas da linha do tempo sob um único cabeçalho de data.
+ */
+export function dayKey(iso: string): string {
+  const date = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
 /** Fuso do navegador, enviado à API para interpretar EXIF e agrupar por dia. */
 export function browserTimeZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone;

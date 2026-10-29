@@ -8,9 +8,9 @@ import {
   untracked,
 } from '@angular/core';
 import { MediaView } from '../../core/api/media.models';
-import { MomentBlock, MomentView } from '../../core/api/timeline.models';
+import { MomentBlock, MomentView, TimelineMedia } from '../../core/api/timeline.models';
 import { StompService } from '../../core/realtime/stomp.service';
-import { formatDay } from '../../core/util/date.util';
+import { dayKey, formatDay } from '../../core/util/date.util';
 import { injectGroup } from '../groups/group-context';
 import { MediaService } from '../media/media.service';
 import { EmptyState } from '../../shared/ui/empty-state';
@@ -25,9 +25,17 @@ import { MediaCard } from './media-card';
 import { MomentSection } from './moment-section';
 import { TimelineStore } from './timeline.store';
 
+/** Um Momento, ou as mídias soltas de um mesmo dia. */
+type TimelineSection =
+  | { kind: 'MOMENT'; id: string; block: MomentBlock }
+  | { kind: 'DAY'; id: string; day: string; label: string; items: TimelineMedia[] };
+
 /**
  * Aba principal do grupo: fotos e vídeos em ordem cronológica, com os que caem no
  * intervalo de um Momento agrupados sob o título dele.
+ *
+ * <p>As mídias que não pertencem a nenhum Momento são reunidas por dia, de modo que
+ * a data apareça uma vez só por bloco, e não uma vez por foto.
  */
 @Component({
   selector: 'app-timeline',
@@ -76,29 +84,38 @@ import { TimelineStore } from './timeline.store';
       }
 
       <ol class="flex flex-col gap-10">
-        @for (entry of store.entries(); track entry.kind + (entry.moment?.moment.id ?? entry.media?.media.id)) {
+        @for (section of sections(); track section.id) {
           <li class="flex flex-col gap-3">
-            @if (entry.kind === 'MOMENT' && entry.moment) {
+            @if (section.kind === 'MOMENT') {
               <app-moment-section
-                [block]="entry.moment"
+                [block]="section.block"
                 [isAdmin]="isAdmin()"
                 (edit)="startEditing($event)"
                 (remove)="confirmRemove($event)"
                 (openComments)="openMomentComments($event)"
               >
-                <span slot="title">{{ entry.moment.moment.title }}</span>
+                <span slot="title">{{ section.block.moment.title }}</span>
 
                 <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  @for (item of entry.moment.media; track item.media.id) {
+                  @for (item of section.block.media; track item.media.id) {
                     <app-media-card [item]="item" (opened)="openMedia($event)" />
                   }
                 </div>
               </app-moment-section>
-            } @else if (entry.media) {
-              <div class="flex flex-col gap-2">
-                <p class="text-xs tracking-wide text-faint uppercase">{{ day(entry.at) }}</p>
+            } @else {
+              <div class="flex flex-col gap-3">
+                <header class="flex items-center gap-3">
+                  <p class="text-xs tracking-wide text-faint uppercase">{{ section.label }}</p>
+                  <span class="h-px flex-1 bg-line/60" aria-hidden="true"></span>
+                  <span class="text-xs text-faint">
+                    {{ section.items.length }}
+                    {{ section.items.length === 1 ? 'mídia' : 'mídias' }}
+                  </span>
+                </header>
                 <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  <app-media-card [item]="entry.media" (opened)="openMedia($event)" />
+                  @for (item of section.items; track item.media.id) {
+                    <app-media-card [item]="item" (opened)="openMedia($event)" />
+                  }
                 </div>
               </div>
             }
@@ -161,6 +178,44 @@ export class TimelinePage {
   protected readonly groupId = this.context.groupId;
 
   protected readonly day = formatDay;
+
+  /**
+   * Agrupa mídias soltas vizinhas do mesmo dia sob um único cabeçalho.
+   *
+   * <p>O agrupamento é por vizinhança, não global: se um Momento acontece no meio do
+   * dia, o que vem antes e o que vem depois continuam em blocos separados, e a ordem
+   * cronológica da página é preservada.
+   */
+  protected readonly sections = computed<TimelineSection[]>(() => {
+    const sections: TimelineSection[] = [];
+
+    for (const entry of this.store.entries()) {
+      if (entry.kind === 'MOMENT' && entry.moment) {
+        sections.push({ kind: 'MOMENT', id: entry.moment.moment.id, block: entry.moment });
+        continue;
+      }
+      if (!entry.media) {
+        continue;
+      }
+
+      const day = dayKey(entry.at);
+      const previous = sections.at(-1);
+      if (previous?.kind === 'DAY' && previous.day === day) {
+        previous.items.push(entry.media);
+      } else {
+        sections.push({
+          kind: 'DAY',
+          // O mesmo dia pode voltar depois de um Momento, então o identificador
+          // carrega a primeira mídia do bloco para nunca se repetir no `track`.
+          id: `dia-${day}-${entry.media.media.id}`,
+          day,
+          label: formatDay(entry.at),
+          items: [entry.media],
+        });
+      }
+    }
+    return sections;
+  });
 
   /** Recarregamento agrupado: várias mensagens seguidas viram uma recarga só. */
   private reloadTimer?: ReturnType<typeof setTimeout>;
