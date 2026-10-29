@@ -14,7 +14,7 @@ public abstract class ApiTest {
     protected int port;
 
     @Autowired
-    private org.springframework.jdbc.core.JdbcTemplate jdbc;
+    protected org.springframework.jdbc.core.JdbcTemplate jdbc;
 
     protected RestTestClient api() {
         return RestTestClient.bindToServer().baseUrl("http://localhost:" + port).build();
@@ -44,7 +44,37 @@ public abstract class ApiTest {
     }
 
     protected void cleanDatabase() {
-        jdbc.execute("truncate table users cascade");
+        jdbc.execute("truncate table users, groups cascade");
+    }
+
+    /** Cria um grupo e devolve seu id; o criador vira administrador. */
+    protected java.util.UUID createGroup(Session owner, String name, String visibility) {
+        var body = api(owner.accessToken()).post()
+                .uri("/api/groups")
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .body(new GroupPayload(name, "Grupo de teste", visibility, null))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(GroupResponse.class)
+                .returnResult()
+                .getResponseBody();
+        return java.util.UUID.fromString(body.id());
+    }
+
+    /**
+     * Coloca alguém no grupo direto pelo banco. Os fluxos de convite e solicitação têm
+     * seus próprios testes; aqui o objetivo é só montar o cenário.
+     */
+    protected void addMember(java.util.UUID groupId, Session user, String role) {
+        jdbc.update("insert into group_members (group_id, user_id, role) values (?, ?, ?)",
+                groupId, user.userId(), role);
+    }
+
+    public record GroupPayload(String name, String description, String visibility, String theme) {
+    }
+
+    public record GroupResponse(String id, String slug, String name, String visibility,
+            String theme, String myRole, long memberCount) {
     }
 
     public record RegisterPayload(String name, String email, String password) {

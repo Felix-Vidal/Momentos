@@ -27,6 +27,53 @@ export const routes: Routes = [
     title: 'Meu perfil · Momentos',
   },
   {
+    path: 'grupos',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/groups/my-groups.page').then((m) => m.MyGroupsPage),
+    title: 'Meus grupos · Momentos',
+  },
+  {
+    path: 'criar-grupo',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/groups/create-group.page').then((m) => m.CreateGroupPage),
+    title: 'Criar grupo · Momentos',
+  },
+  {
+    path: 'descobrir',
+    loadComponent: () =>
+      import('./features/groups/discover-groups.page').then((m) => m.DiscoverGroupsPage),
+    title: 'Descobrir grupos · Momentos',
+  },
+  {
+    // Moldura do grupo: as abas são rotas filhas e compartilham o grupo carregado.
+    path: 'g/:slug',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/groups/group-shell.page').then((m) => m.GroupShellPage),
+    children: [
+      {
+        path: '',
+        loadComponent: () =>
+          import('./features/timeline/timeline.page').then((m) => m.TimelinePage),
+      },
+      {
+        path: 'integrantes',
+        loadComponent: () => import('./features/members/members-tab').then((m) => m.MembersTab),
+      },
+      {
+        path: 'integrantes/:userId',
+        loadComponent: () =>
+          import('./features/members/member-profile.page').then((m) => m.MemberProfilePage),
+      },
+      {
+        path: 'configuracoes',
+        loadComponent: () =>
+          import('./features/groups/group-settings.page').then((m) => m.GroupSettingsPage),
+      },
+    ],
+  },
+  {
     path: '**',
     loadComponent: () => import('./features/home/not-found.page').then((m) => m.NotFoundPage),
     title: 'Página não encontrada · Momentos',

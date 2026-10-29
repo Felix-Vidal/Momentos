@@ -1,0 +1,66 @@
+import { ChangeDetectionStrategy, Component, computed, inject, input, resource } from '@angular/core';
+import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Spinner } from '../../shared/ui/spinner';
+import { DefaultHero } from './themes/default-hero';
+import { RouletteHero } from './themes/roulette-hero';
+import { GroupsService } from './groups.service';
+
+/**
+ * Moldura de um grupo: hero conforme o tema e as abas da linha do tempo,
+ * integrantes e configurações. O grupo carregado é compartilhado com as abas
+ * pelo `GroupContext`.
+ */
+@Component({
+  selector: 'app-group-shell',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, Spinner, DefaultHero, RouletteHero],
+  template: `
+    @if (group.isLoading()) {
+      <app-spinner label="Abrindo o grupo…" />
+    } @else if (group.value(); as g) {
+      <section class="flex flex-col gap-6">
+        @if (g.theme === 'ROULETTE') {
+          <app-roulette-hero [name]="g.name" [description]="g.description" />
+        } @else {
+          <app-default-hero [name]="g.name" [description]="g.description" />
+        }
+
+        <nav class="flex flex-wrap items-center gap-1 border-b border-line/60 pb-px text-sm">
+          <a
+            [routerLink]="['/g', g.slug]"
+            routerLinkActive="border-brand text-ink"
+            [routerLinkActiveOptions]="{ exact: true }"
+            class="rounded-t-lg border-b-2 border-transparent px-4 py-2 text-muted transition hover:text-ink"
+          >Linha do tempo</a>
+          <a
+            [routerLink]="['/g', g.slug, 'integrantes']"
+            routerLinkActive="border-brand text-ink"
+            class="rounded-t-lg border-b-2 border-transparent px-4 py-2 text-muted transition hover:text-ink"
+          >Integrantes <span class="text-faint">{{ g.memberCount }}</span></a>
+          @if (g.myRole === 'ADMIN') {
+            <a
+              [routerLink]="['/g', g.slug, 'configuracoes']"
+              routerLinkActive="border-brand text-ink"
+              class="rounded-t-lg border-b-2 border-transparent px-4 py-2 text-muted transition hover:text-ink"
+            >Configurações</a>
+          }
+        </nav>
+
+        <router-outlet />
+      </section>
+    }
+  `,
+})
+export class GroupShellPage {
+  /** Vem da rota /g/:slug por componentInputBinding. */
+  readonly slug = input.required<string>();
+
+  private readonly service = inject(GroupsService);
+
+  readonly group = resource({
+    params: () => ({ slug: this.slug(), revision: this.service.revision() }),
+    loader: ({ params }) => this.service.bySlug(params.slug),
+  });
+
+  readonly groupId = computed(() => this.group.value()?.id ?? null);
+}
