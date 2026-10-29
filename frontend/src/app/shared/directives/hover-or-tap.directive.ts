@@ -1,5 +1,6 @@
 import { Directive, HostListener, inject, OnDestroy, output, signal } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
+import { hasHover } from '../../core/util/environment.util';
 
 /**
  * Mesma intenção em dois mundos de entrada.
@@ -29,7 +30,7 @@ export class HoverOrTapDirective implements OnDestroy {
   readonly isActive = this.active.asReadonly();
 
   private get hasHover(): boolean {
-    return this.document.defaultView?.matchMedia('(hover: hover)').matches ?? true;
+    return hasHover(this.document.defaultView);
   }
 
   @HostListener('mouseenter')

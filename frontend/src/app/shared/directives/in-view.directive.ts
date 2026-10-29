@@ -1,4 +1,5 @@
 import { Directive, ElementRef, inject, OnDestroy, OnInit, output } from '@angular/core';
+import { prefersReducedMotion } from '../../core/util/environment.util';
 
 /**
  * Anima a entrada do elemento quando ele aparece na tela e avisa quando chega perto
@@ -18,7 +19,7 @@ export class InViewDirective implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     const element = this.host.nativeElement;
-    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reduced = prefersReducedMotion(element.ownerDocument.defaultView);
 
     if (reduced || typeof IntersectionObserver === 'undefined') {
       element.dataset['inView'] = 'true';

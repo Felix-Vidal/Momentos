@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
 import { MediaView } from '../../core/api/media.models';
 import { MomentBlock, MomentView } from '../../core/api/timeline.models';
 import { StompService } from '../../core/realtime/stomp.service';
@@ -159,11 +167,16 @@ export class TimelinePage {
 
   constructor() {
     // Abre a linha do tempo quando o grupo chega e recarrega quando entram mídias novas.
+    //
+    // O carregamento roda em `untracked`: a parte síncrona de `open()` lê sinais do
+    // próprio store (o grupo atual e o indicador de carregamento) e os escreve logo
+    // em seguida. Sem isolar, o effect passaria a depender deles e se redisparia em
+    // laço, limpando a lista a cada volta — a tela ficaria eternamente no esqueleto.
     effect(() => {
       const groupId = this.context.groupId();
       this.media.revision();
       if (groupId) {
-        void this.store.open(groupId);
+        untracked(() => void this.store.open(groupId));
       }
     });
 
@@ -173,7 +186,9 @@ export class TimelinePage {
       if (!groupId) {
         return;
       }
-      const subscription = this.stomp.comments(groupId).subscribe(() => this.scheduleReload());
+      const subscription = untracked(() =>
+        this.stomp.comments(groupId).subscribe(() => this.scheduleReload()),
+      );
       onCleanup(() => subscription.unsubscribe());
     });
   }

@@ -12,6 +12,7 @@ import {
 } from '@angular/core';
 import { animate } from 'motion';
 import { CommentView } from '../../core/api/timeline.models';
+import { prefersReducedMotion } from '../../core/util/environment.util';
 import { Avatar } from '../../shared/ui/avatar';
 
 /** Tempo base por comentário e folga por tamanho do texto. */
@@ -183,11 +184,7 @@ export class CommentCarousel implements OnDestroy {
   }
 
   private prefersReducedMotion(): boolean {
-    return (
-      this.host.nativeElement.ownerDocument.defaultView?.matchMedia(
-        '(prefers-reduced-motion: reduce)',
-      ).matches ?? false
-    );
+    return prefersReducedMotion(this.host.nativeElement.ownerDocument.defaultView);
   }
 
   private stop(): void {

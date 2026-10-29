@@ -1,4 +1,4 @@
-import { DestroyRef, inject, Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { Client, StompSubscription } from '@stomp/stompjs';
 import { Observable, Subject } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
@@ -27,7 +27,12 @@ export class StompService {
   private readonly subscriptions = new Map<string, StompSubscription>();
   private readonly streams = new Map<string, Subject<CommentEvent>>();
 
-  /** Eventos de comentários de um grupo. */
+  /**
+   * Eventos de comentários de um grupo.
+   *
+   * <p>Quem assina é responsável por cancelar a inscrição — este método é chamado
+   * de dentro de um effect, onde `inject()` não está disponível.
+   */
   comments(groupId: string): Observable<CommentEvent> {
     const destination = `/topic/groups/${groupId}/comments`;
     let stream = this.streams.get(destination);
@@ -38,9 +43,13 @@ export class StompService {
     this.ensureConnected();
     this.subscribe(destination);
 
-    const destroyRef = inject(DestroyRef, { optional: true });
-    destroyRef?.onDestroy(() => this.release(destination));
-    return stream.asObservable();
+    return new Observable<CommentEvent>((subscriber) => {
+      const inner = stream.subscribe(subscriber);
+      return () => {
+        inner.unsubscribe();
+        this.release(destination);
+      };
+    });
   }
 
   private ensureConnected(): void {
