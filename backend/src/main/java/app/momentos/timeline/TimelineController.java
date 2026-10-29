@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -36,8 +37,10 @@ public class TimelineController {
             @RequestParam(required = false) Instant from,
             @RequestParam(required = false) Instant to,
             @RequestParam(required = false) String cursor,
+            @RequestParam(required = false) List<UUID> categoryIds,
             @RequestParam(defaultValue = "24") int limit) {
-        return timeline.load(groupId, me.id(), from, to, cursor, Math.min(limit, 100));
+        return timeline.load(groupId, me.id(), from, to, cursor, Math.min(limit, 100),
+                categoryIds == null ? List.of() : categoryIds);
     }
 
     @GetMapping("/day/{date}")

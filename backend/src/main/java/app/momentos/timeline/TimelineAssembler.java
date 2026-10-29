@@ -1,5 +1,7 @@
 package app.momentos.timeline;
 
+import app.momentos.categories.CategoryService;
+import app.momentos.categories.dto.CategoryView;
 import app.momentos.comments.dto.CommentView;
 import app.momentos.groups.GroupRole;
 import app.momentos.media.Media;
@@ -35,9 +37,11 @@ public class TimelineAssembler {
     private static final int COMMENTS_PER_MOMENT = 16;
 
     private final MomentAssignmentService assignment;
+    private final CategoryService categories;
 
-    public TimelineAssembler(MomentAssignmentService assignment) {
+    public TimelineAssembler(MomentAssignmentService assignment, CategoryService categories) {
         this.assignment = assignment;
+        this.categories = categories;
     }
 
     /**
@@ -59,6 +63,7 @@ public class TimelineAssembler {
         Map<UUID, List<CommentView>> previews =
                 comments.previewsFor(groupId, mediaIds, viewerId, viewerRole, COMMENTS_PER_MEDIA);
         Map<UUID, Long> counts = comments.countsFor(groupId, mediaIds);
+        Map<UUID, List<CategoryView>> badges = categories.badgesFor(groupId, mediaIds);
 
         Map<UUID, List<TimelineMedia>> byMoment = new LinkedHashMap<>();
         Map<UUID, Moment> momentsById = new LinkedHashMap<>();
@@ -68,7 +73,8 @@ public class TimelineAssembler {
             TimelineMedia item = new TimelineMedia(
                     MediaView.of(media, owners.get(media.getOwnerId())),
                     counts.getOrDefault(media.getId(), 0L),
-                    previews.getOrDefault(media.getId(), List.of()));
+                    previews.getOrDefault(media.getId(), List.of()),
+                    badges.getOrDefault(media.getId(), List.of()));
 
             var owner = assignment.assign(media.getCapturedAt(), moments);
             if (owner.isPresent()) {

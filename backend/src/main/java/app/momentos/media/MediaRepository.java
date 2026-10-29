@@ -29,6 +29,23 @@ public interface MediaRepository extends JpaRepository<Media, UUID> {
     List<Media> findSharedWithGroup(UUID groupId, Instant from, Instant to,
             Instant cursorAt, UUID cursorId, Pageable pageable);
 
+    /**
+     * Mesma página da linha do tempo, restrita às mídias marcadas com alguma das
+     * categorias informadas — é o filtro por categoria da tela.
+     */
+    @Query("""
+            select m from Media m
+            where m.id in (select s.mediaId from MediaGroupShare s where s.groupId = :groupId)
+              and m.id in (select mc.mediaId from MediaCategory mc
+                           where mc.categoryId in :categoryIds)
+              and m.capturedAt >= :from
+              and m.capturedAt < :to
+              and (m.capturedAt > :cursorAt or (m.capturedAt = :cursorAt and m.id > :cursorId))
+            order by m.capturedAt asc, m.id asc
+            """)
+    List<Media> findSharedWithGroupInCategories(UUID groupId, List<UUID> categoryIds,
+            Instant from, Instant to, Instant cursorAt, UUID cursorId, Pageable pageable);
+
     /** Mídias que um integrante publicou em um grupo específico. */
     @Query("""
             select m from Media m

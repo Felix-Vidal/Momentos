@@ -1,5 +1,9 @@
 package app.momentos.seed;
 
+import app.momentos.categories.Category;
+import app.momentos.categories.CategoryRepository;
+import app.momentos.categories.MediaCategory;
+import app.momentos.categories.MediaCategoryRepository;
 import app.momentos.comments.Comment;
 import app.momentos.comments.CommentRepository;
 import app.momentos.groups.Group;
@@ -83,6 +87,8 @@ public class DemoSeeder {
         private final MomentRepository moments;
         private final CommentRepository comments;
         private final JoinRequestRepository joinRequests;
+        private final CategoryRepository categories;
+        private final MediaCategoryRepository mediaCategories;
         private final StorageService storage;
         private final ImageThumbnailGenerator thumbnails;
         private final PlaceholderImageFactory images;
@@ -93,6 +99,7 @@ public class DemoSeeder {
         Seeder(UserRepository users, GroupRepository groups, GroupMemberRepository members,
                 MediaRepository media, MediaGroupShareRepository shares, MomentRepository moments,
                 CommentRepository comments, JoinRequestRepository joinRequests,
+                CategoryRepository categories, MediaCategoryRepository mediaCategories,
                 StorageService storage, ImageThumbnailGenerator thumbnails,
                 PlaceholderImageFactory images, PlaceholderVideoFactory videos,
                 FfmpegVideoProcessor videoProcessor, PasswordEncoder passwordEncoder) {
@@ -104,6 +111,8 @@ public class DemoSeeder {
             this.moments = moments;
             this.comments = comments;
             this.joinRequests = joinRequests;
+            this.categories = categories;
+            this.mediaCategories = mediaCategories;
             this.storage = storage;
             this.thumbnails = thumbnails;
             this.images = images;
@@ -119,8 +128,10 @@ public class DemoSeeder {
                 // atualizou o projeto sem recriar o banco.
                 Group existing = groups.findBySlug(GROUP_SLUG).orElseThrow();
                 List<User> roster = people(password);
-                if (seedExtras(existing, roster)) {
-                    log.info("Seed: conteúdo extra (vídeos e momentos de demonstração) aplicado.");
+                boolean extras = seedExtras(existing, roster);
+                boolean etiquetas = seedCategories(existing, roster);
+                if (extras || etiquetas) {
+                    log.info("Seed: conteúdo novo aplicado ao grupo existente.");
                 } else {
                     log.info("Seed já aplicado: grupo '{}' está completo.", GROUP_SLUG);
                 }
@@ -147,6 +158,7 @@ public class DemoSeeder {
 
             seedTimeline(group, people);
             seedExtras(group, people);
+            seedCategories(group, people);
             seedSecondGroup(people, password);
 
             log.info("Seed pronto: entre com {} e a senha '{}'.", owner.getEmail(), password);
@@ -411,6 +423,72 @@ public class DemoSeeder {
             Media saved = media.save(entity);
             shares.save(new MediaGroupShare(saved.getId(), group.getId(), author.getId()));
             return java.util.Optional.of(saved);
+        }
+
+        /**
+         * O vocabulário do grupo: cada turma inventa o seu. Aqui ficam as categorias
+         * da Sociedade da Roleta, com as mídias já marcadas pelo que o título conta.
+         *
+         * @return true se as categorias foram criadas agora
+         */
+        private boolean seedCategories(Group group, List<User> people) {
+            if (!categories.findByGroupIdOrderByName(group.getId()).isEmpty()) {
+                return false;
+            }
+
+            record Tag(String name, String color, String emoji, List<String> matches) {
+            }
+            // Cada categoria sabe quais legendas do seed ela marca.
+            List<Tag> vocabulary = List.of(
+                    new Tag("Almoço", "#f5b53f", "🍽", List.of(
+                            "Primeira roleta do semestre", "A bandeja que ninguém queria",
+                            "Fila do RU às 11h58", "Roleta improvisada no caderno",
+                            "Mesa do fundo, de novo", "Sobremesa negociada",
+                            "Almoço comemorando a entrega", "A roleta decidiu: Félix",
+                            "Bandejas em comboio", "Roleta da semana seguinte",
+                            "Helena girou e escapou", "Último almoço antes das provas",
+                            "A roleta girando em câmera lenta")),
+                    new Tag("Roleta", "#a855f7", "🎯", List.of(
+                            "Primeira roleta do semestre", "Roleta improvisada no caderno",
+                            "A roleta decidiu: Félix", "Roleta da semana seguinte",
+                            "Helena girou e escapou", "A roleta girando em câmera lenta")),
+                    new Tag("Corujão", "#7c3aed", "🌙", List.of(
+                            "Chegando para o corujão", "Primeira partida da LetalCompany",
+                            "Quase deu certo", "Meia-noite e ninguém desistiu",
+                            "Pausa para o lanche", "Estratégia na lousa", "Vitória às 3h47",
+                            "O sol chegou antes do sono", "Partida da LetalCompany às 23h58",
+                            "O grito da vitória, 3h47")),
+                    new Tag("Jogos", "#34d399", "🎲", List.of(
+                            "Primeira partida da LetalCompany", "Quase deu certo",
+                            "Estratégia na lousa", "Vitória às 3h47",
+                            "Partida da LetalCompany às 23h58", "O grito da vitória, 3h47",
+                            "Maratona de série, episódio 1")),
+                    new Tag("Café da manhã", "#f43f5e", "☕", List.of(
+                            "Café da manhã improvisado", "Café que salvou o trabalho")),
+                    new Tag("Rolê", "#0ea5e9", "🚶", List.of(
+                            "Maratona de série, episódio 1", "Pipoca acabou no episódio 4",
+                            "A discussão sobre o final")),
+                    new Tag("Estudo", "#c99cff", "📚", List.of(
+                            "Laboratório antes da prova", "Café que salvou o trabalho",
+                            "Aula das 8h, heroicamente")),
+                    // Categorias que o grupo ainda vai usar: aparecem na lista com zero.
+                    new Tag("Festa", "#f5b53f", "🎉", List.of()),
+                    new Tag("Jantar", "#7c3aed", "🍲", List.of()),
+                    new Tag("Tereré", "#34d399", "🧉", List.of()));
+
+            List<Media> doGrupo = media.findInInterval(group.getId(),
+                    Instant.parse("2000-01-01T00:00:00Z"), Instant.parse("2100-01-01T00:00:00Z"));
+
+            for (Tag tag : vocabulary) {
+                Category category = categories.save(new Category(group.getId(), tag.name(),
+                        tag.color(), tag.emoji(), people.getFirst().getId()));
+
+                doGrupo.stream()
+                        .filter(m -> m.getCaption() != null && tag.matches().contains(m.getCaption()))
+                        .forEach(m -> mediaCategories.save(new MediaCategory(
+                                m.getId(), category.getId(), people.getFirst().getId())));
+            }
+            return true;
         }
 
         /** Um segundo grupo, privado e pequeno, para a visibilidade ficar visível. */

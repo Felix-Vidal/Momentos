@@ -56,6 +56,16 @@ public class TimelineService {
     @Transactional(readOnly = true)
     public CursorPage<TimelineEntry> load(UUID groupId, UUID userId, Instant from, Instant to,
             String cursor, int limit) {
+        return load(groupId, userId, from, to, cursor, limit, List.of());
+    }
+
+    /**
+     * @param categoryIds quando não vazio, só entram as mídias marcadas com alguma
+     *                    dessas categorias; Momentos que ficam sem mídia somem da página
+     */
+    @Transactional(readOnly = true)
+    public CursorPage<TimelineEntry> load(UUID groupId, UUID userId, Instant from, Instant to,
+            String cursor, int limit, List<UUID> categoryIds) {
         GroupMember me = access.requireMember(groupId, userId);
 
         Cursor position = Cursor.decode(cursor);
@@ -63,8 +73,12 @@ public class TimelineService {
         Instant end = to == null ? FIM_DOS_TEMPOS : to;
 
         // Busca um item extra para saber se existe página seguinte.
-        List<Media> found = media.findSharedWithGroup(groupId, start, end,
-                position.at(), position.id(), PageRequest.of(0, limit + 1));
+        var pageable = PageRequest.of(0, limit + 1);
+        List<Media> found = categoryIds.isEmpty()
+                ? media.findSharedWithGroup(groupId, start, end,
+                        position.at(), position.id(), pageable)
+                : media.findSharedWithGroupInCategories(groupId, categoryIds, start, end,
+                        position.at(), position.id(), pageable);
 
         boolean hasMore = found.size() > limit;
         List<Media> page = hasMore ? found.subList(0, limit) : found;
@@ -79,6 +93,15 @@ public class TimelineService {
 
         List<TimelineEntry> entries = assembler.assemble(groupId, page, relevantMoments, owners,
                 comments, userId, me.getRole(), windowStart, windowEnd);
+
+        if (!categoryIds.isEmpty()) {
+            // Com filtro ativo, um Momento sem nenhuma mídia correspondente não tem
+            // o que mostrar; o título sozinho confundiria a leitura do resultado.
+            entries = entries.stream()
+                    .filter(entry -> entry.kind() != TimelineEntry.Kind.MOMENT
+                            || !entry.moment().media().isEmpty())
+                    .toList();
+        }
 
         if (!hasMore) {
             return CursorPage.last(entries);
