@@ -1,39 +1,39 @@
 import { Injectable, signal } from '@angular/core';
 
-export type TipoToast = 'sucesso' | 'erro' | 'info';
+export type ToastKind = 'success' | 'error' | 'info';
 
 export interface Toast {
   id: number;
-  tipo: TipoToast;
-  texto: string;
+  kind: ToastKind;
+  text: string;
 }
 
 @Injectable({ providedIn: 'root' })
 export class ToastService {
-  private proximoId = 0;
-  private readonly lista = signal<Toast[]>([]);
+  private nextId = 0;
+  private readonly items = signal<Toast[]>([]);
 
-  readonly toasts = this.lista.asReadonly();
+  readonly toasts = this.items.asReadonly();
 
-  sucesso(texto: string): void {
-    this.mostrar('sucesso', texto);
+  success(text: string): void {
+    this.show('success', text);
   }
 
-  erro(texto: string): void {
-    this.mostrar('erro', texto);
+  error(text: string): void {
+    this.show('error', text);
   }
 
-  info(texto: string): void {
-    this.mostrar('info', texto);
+  info(text: string): void {
+    this.show('info', text);
   }
 
-  fechar(id: number): void {
-    this.lista.update((atuais) => atuais.filter((t) => t.id !== id));
+  dismiss(id: number): void {
+    this.items.update((current) => current.filter((t) => t.id !== id));
   }
 
-  private mostrar(tipo: TipoToast, texto: string): void {
-    const id = this.proximoId++;
-    this.lista.update((atuais) => [...atuais, { id, tipo, texto }]);
-    setTimeout(() => this.fechar(id), 5000);
+  private show(kind: ToastKind, text: string): void {
+    const id = this.nextId++;
+    this.items.update((current) => [...current, { id, kind, text }]);
+    setTimeout(() => this.dismiss(id), 5000);
   }
 }

@@ -4,7 +4,7 @@ import { catchError, throwError } from 'rxjs';
 import { ToastService } from '../../shared/ui/toast.service';
 
 /** Erro da API no formato devolvido pelo GlobalExceptionHandler do backend. */
-export interface ErroApi {
+export interface ApiError {
   code: string;
   message: string;
   fields?: { field: string; message: string }[];
@@ -12,28 +12,28 @@ export interface ErroApi {
 }
 
 /**
- * Transforma qualquer falha HTTP em um `ErroApi` e avisa o usuário.
- * Erros de validação (400) seguem adiante sem toast: o formulário é quem mostra.
+ * Transforma qualquer falha HTTP em um `ApiError` e avisa o usuário.
+ * Erros de validação (400) e de sessão (401) seguem adiante sem toast:
+ * quem mostra é o formulário ou o fluxo de renovação de token.
  */
-export const erroInterceptor: HttpInterceptorFn = (req, next) => {
+export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   const toast = inject(ToastService);
 
   return next(req).pipe(
-    catchError((erro: HttpErrorResponse) => {
-      const corpo: ErroApi = erro.error?.code
-        ? erro.error
-        : { code: 'falha_rede', message: mensagemPadrao(erro.status) };
+    catchError((error: HttpErrorResponse) => {
+      const body: ApiError = error.error?.code
+        ? error.error
+        : { code: 'falha_rede', message: defaultMessage(error.status) };
 
-      const silencioso = erro.status === 400 || erro.status === 401;
-      if (!silencioso) {
-        toast.erro(corpo.message);
+      if (error.status !== 400 && error.status !== 401) {
+        toast.error(body.message);
       }
-      return throwError(() => corpo);
+      return throwError(() => body);
     }),
   );
 };
 
-function mensagemPadrao(status: number): string {
+function defaultMessage(status: number): string {
   switch (status) {
     case 0:
       return 'Não foi possível falar com o servidor. Verifique sua conexão.';

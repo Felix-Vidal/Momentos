@@ -36,6 +36,12 @@ server:
 momentos:
   cors:
     allowed-origins: ${MOMENTOS_CORS_ORIGINS:}
+  jwt:
+    # Chave HMAC em Base64. Sem ela, uma chave temporária é gerada na subida
+    # (válida só para desenvolvimento): defina MOMENTOS_JWT_SECRET em produção.
+    secret: ${MOMENTOS_JWT_SECRET:}
+    access-ttl: 15m
+    refresh-ttl: 7d
 
 management:
   endpoints:
