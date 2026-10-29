@@ -1,7 +1,7 @@
 # Perfil de desenvolvimento: banco e MinIO do docker-compose, seed de demonstração ligado.
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/momentos
+    url: jdbc:postgresql://localhost:${MOMENTOS_DB_PORT:5433}/momentos
     username: momentos
     password: momentos
   jpa:

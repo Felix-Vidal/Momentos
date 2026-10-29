@@ -13,7 +13,8 @@ services:
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - ./postgres-data:/var/lib/postgresql/data
+      # Em postgres:18+ o mount é na raiz do diretório, não em .../data
+      - momentos-postgres-data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-momentos} -d ${POSTGRES_DB:-momentos}"]
       interval: 5s
@@ -31,7 +32,7 @@ services:
       - "${MINIO_PORT:-9000}:9000"
       - "${MINIO_CONSOLE_PORT:-9001}:9001"   # console web: http://localhost:9001
     volumes:
-      - ./minio-data:/data
+      - momentos-minio-data:/data
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
       interval: 5s
@@ -58,3 +59,7 @@ services:
       MOMENTOS_CORS_ORIGINS: http://localhost:4200
     ports:
       - "${MOMENTOS_PORT:-8080}:8080"
+
+volumes:
+  momentos-postgres-data:
+  momentos-minio-data:

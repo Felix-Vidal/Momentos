@@ -30,7 +30,8 @@ mas a plataforma é genérica: qualquer pessoa cria um grupo.
 ```bash
 cp .env.example .env                 # ajuste se quiser
 
-# 1) infraestrutura
+# 1) infraestrutura (o PostgreSQL do container escuta na 5433,
+#    para não conflitar com um PostgreSQL instalado na máquina)
 docker compose up -d postgres minio
 
 # 2) backend (http://localhost:8080, Swagger em /swagger-ui.html)
