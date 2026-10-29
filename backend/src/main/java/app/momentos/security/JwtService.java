@@ -24,6 +24,15 @@ public class JwtService {
     private static final Logger log = LoggerFactory.getLogger(JwtService.class);
     private static final String CLAIM_NAME = "name";
     private static final String CLAIM_EMAIL = "email";
+    private static final String CLAIM_SCOPE = "scope";
+
+    /** Token normal da API: vale para tudo que o usuário pode fazer. */
+    public static final String SCOPE_ACCESS = "access";
+    /**
+     * Token que viaja em cookie para a tag {@code <img>}/{@code <video>} poder carregar
+     * arquivos. Vale somente para ler mídia — ver {@link JwtAuthFilter}.
+     */
+    public static final String SCOPE_MEDIA = "media";
 
     private final SecretKey key;
     private final JwtProperties properties;
@@ -34,32 +43,66 @@ public class JwtService {
     }
 
     public String issueAccessToken(User user) {
-        Instant now = Instant.now();
-        return Jwts.builder()
-                .subject(user.getId().toString())
-                .claim(CLAIM_NAME, user.getName())
-                .claim(CLAIM_EMAIL, user.getEmail())
-                .issuedAt(Date.from(now))
-                .expiration(Date.from(now.plus(properties.accessTtl())))
-                .signWith(key)
-                .compact();
+        return issue(user.getId(), user.getEmail(), user.getName(), SCOPE_ACCESS,
+                properties.accessTtl());
     }
 
-    /** Devolve o usuário do token, ou vazio se o token for inválido ou expirado. */
+    /**
+     * Token de leitura de mídia, guardado em cookie httpOnly. Vive tanto quanto a
+     * sessão porque o navegador não tem como renovar o cookie no meio de um
+     * carregamento de imagem.
+     */
+    public String issueMediaToken(UUID userId, String email, String name) {
+        return issue(userId, email, name, SCOPE_MEDIA, properties.refreshTtl());
+    }
+
+    /** Devolve o usuário do token de API, ou vazio se não servir. */
     public Optional<CurrentUser> readAccessToken(String token) {
+        return read(token)
+                .filter(payload -> SCOPE_ACCESS.equals(payload.scope()))
+                .map(TokenPayload::user);
+    }
+
+    /** Lê qualquer token válido, informando o escopo. */
+    public Optional<TokenPayload> read(String token) {
         try {
             Claims claims = Jwts.parser()
                     .verifyWith(key)
                     .build()
                     .parseSignedClaims(token)
                     .getPayload();
-            return Optional.of(new CurrentUser(
-                    UUID.fromString(claims.getSubject()),
-                    claims.get(CLAIM_EMAIL, String.class),
-                    claims.get(CLAIM_NAME, String.class)));
+            String scope = claims.get(CLAIM_SCOPE, String.class);
+            return Optional.of(new TokenPayload(
+                    new CurrentUser(
+                            UUID.fromString(claims.getSubject()),
+                            claims.get(CLAIM_EMAIL, String.class),
+                            claims.get(CLAIM_NAME, String.class)),
+                    scope == null ? SCOPE_ACCESS : scope));
         } catch (JwtException | IllegalArgumentException ex) {
             return Optional.empty();
         }
+    }
+
+    public long mediaTokenSeconds() {
+        return properties.refreshTtl().toSeconds();
+    }
+
+    private String issue(UUID userId, String email, String name, String scope,
+            java.time.Duration ttl) {
+        Instant now = Instant.now();
+        return Jwts.builder()
+                .subject(userId.toString())
+                .claim(CLAIM_NAME, name)
+                .claim(CLAIM_EMAIL, email)
+                .claim(CLAIM_SCOPE, scope)
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(now.plus(ttl)))
+                .signWith(key)
+                .compact();
+    }
+
+    /** Conteúdo de um token lido. */
+    public record TokenPayload(CurrentUser user, String scope) {
     }
 
     public long accessTokenSeconds() {

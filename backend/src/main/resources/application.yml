@@ -32,6 +32,9 @@ server:
   port: ${MOMENTOS_PORT:8080}
   error:
     include-message: never
+  # Atrás de proxy reverso, respeita X-Forwarded-*: é o que faz o cookie de mídia
+  # ser marcado como Secure quando o site é servido por HTTPS.
+  forward-headers-strategy: framework
 
 momentos:
   cors:

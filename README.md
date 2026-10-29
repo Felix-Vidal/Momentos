@@ -103,6 +103,14 @@ frontend/   Angular (core/ infraestrutura, shared/ UI reutilizável, features/ t
 docs/       documentação de apoio da API
 ```
 
+## Como a mídia é protegida
+
+O conteúdo de um grupo só é visível a membros, inclusive os arquivos. Como uma tag
+`<img>` não envia cabeçalho de autenticação, o login instala um cookie `HttpOnly`
+(`SameSite=Lax`, `Path=/api/media`) com um token de escopo restrito: ele serve apenas
+para **ler** foto e miniatura, e é ignorado em qualquer outra rota da API. Sem ele,
+nenhuma imagem carregaria; com ele, nada além de imagens é liberado.
+
 ## Conceitos
 
 - **Mídia** pertence ao usuário que enviou e é compartilhada com um ou mais grupos.

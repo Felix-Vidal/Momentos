@@ -6,6 +6,12 @@ Base: `/api`. Documentação interativa (Swagger UI): `http://localhost:8080/swa
 
 - Autenticação por `Authorization: Bearer <access_token>` (JWT de 15 minutos);
   renovação pelo refresh token, que é **rotativo** — renovar revoga o token usado.
+- **Arquivos de mídia são a exceção.** Uma tag `<img>`/`<video>` não manda cabeçalho de
+  autenticação, então as respostas de login, cadastro e refresh instalam o cookie
+  `momentos_media` (`HttpOnly`, `SameSite=Lax`, `Path=/api/media`). Ele carrega um token
+  de escopo `media`, que o servidor aceita **somente** em `GET` de `/api/media/{id}/file`
+  e `/thumbnail`; em qualquer outra rota o cookie é ignorado e o cabeçalho volta a ser
+  obrigatório. O logout o apaga.
 - Datas em ISO-8601 com fuso (`2026-10-13T22:00:00-05:00`); o banco guarda `timestamptz`.
 - Endpoints que dependem do fuso de quem olha aceitam `timeZone` (ex.: `America/Rio_Branco`).
 - Erros seguem sempre o mesmo corpo:
