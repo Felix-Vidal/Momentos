@@ -39,4 +39,9 @@ export class JoinRequestsService {
       this.http.post<void>(`/api/groups/${groupId}/join-requests/${requestId}/reject`, {}),
     );
   }
+
+  /** Cancela o próprio pedido, enquanto ninguém respondeu. */
+  cancelMine(groupId: string): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(`/api/groups/${groupId}/join-requests/mine`));
+  }
 }

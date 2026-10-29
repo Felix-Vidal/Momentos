@@ -4,15 +4,35 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { FieldError } from '../../shared/ui/field-error';
 import { ToastService } from '../../shared/ui/toast.service';
+import { InviteDialog } from '../invites/invite.dialog';
+import { JoinRequestsPanel } from '../invites/join-requests-panel';
 import { injectGroup } from './group-context';
 import { GroupsService } from './groups.service';
 
 @Component({
   selector: 'app-group-settings',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, FieldError],
+  imports: [ReactiveFormsModule, FieldError, InviteDialog, JoinRequestsPanel],
   template: `
     <section class="flex max-w-lg flex-col gap-6">
+      @if (groupId(); as id) {
+        <app-join-requests-panel [groupId]="id" />
+
+        <div class="flex flex-col gap-2 rounded-box border border-line bg-surface/40 p-4">
+          <p class="text-sm">Convidar gente para o grupo</p>
+          <p class="text-xs text-faint">
+            Gere um link para compartilhar no grupo de mensagens ou convide alguém pelo e-mail.
+            Ninguém entra sem convite ou aprovação.
+          </p>
+          <button
+            type="button"
+            class="mt-1 self-start rounded-full bg-brand px-4 py-2 text-sm font-medium text-base
+                   transition hover:bg-brand-soft active:scale-95"
+            (click)="inviting.set(true)"
+          >Convidar</button>
+        </div>
+      }
+
       <form class="flex flex-col gap-5" [formGroup]="form" (ngSubmit)="save()">
         <label class="flex flex-col gap-1.5">
           <span class="text-sm text-muted">Nome do grupo</span>
@@ -81,6 +101,10 @@ import { GroupsService } from './groups.service';
           (click)="leave()"
         >Sair do grupo</button>
       </div>
+
+      @if (inviting() && groupId()) {
+        <app-invite-dialog [groupId]="groupId()!" (closed)="inviting.set(false)" />
+      }
     </section>
   `,
 })
@@ -92,8 +116,11 @@ export class GroupSettingsPage {
   private readonly fb = inject(FormBuilder);
 
   private readonly context = injectGroup();
+
   protected readonly saving = signal(false);
   protected readonly failure = signal<string | null>(null);
+  protected readonly inviting = signal(false);
+  protected readonly groupId = this.context.groupId;
 
   protected readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.minLength(2)]],

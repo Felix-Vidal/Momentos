@@ -74,6 +74,12 @@ export const routes: Routes = [
     ],
   },
   {
+    path: 'convite/:token',
+    loadComponent: () =>
+      import('./features/invites/join-by-token.page').then((m) => m.JoinByTokenPage),
+    title: 'Convite · Momentos',
+  },
+  {
     path: '**',
     loadComponent: () => import('./features/home/not-found.page').then((m) => m.NotFoundPage),
     title: 'Página não encontrada · Momentos',

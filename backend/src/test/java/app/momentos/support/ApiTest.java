@@ -16,6 +16,7 @@ public abstract class ApiTest {
     @Autowired
     protected org.springframework.jdbc.core.JdbcTemplate jdbc;
 
+    /** Token em claro só existe na criação do convite, então o teste o guarda. */
     protected RestTestClient api() {
         return RestTestClient.bindToServer().baseUrl("http://localhost:" + port).build();
     }
