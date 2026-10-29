@@ -42,6 +42,27 @@ momentos:
     secret: ${MOMENTOS_JWT_SECRET:}
     access-ttl: 15m
     refresh-ttl: 7d
+  storage:
+    # "local" grava em disco; "s3" fala com qualquer serviço compatível
+    # (AWS, Cloudflare R2, Backblaze B2, Wasabi).
+    type: ${MOMENTOS_STORAGE_TYPE:local}
+    local:
+      path: ${MOMENTOS_STORAGE_LOCAL_PATH:./storage}
+    s3:
+      endpoint: ${MOMENTOS_S3_ENDPOINT:}
+      region: ${MOMENTOS_S3_REGION:us-east-1}
+      bucket: ${MOMENTOS_S3_BUCKET:}
+      access-key: ${MOMENTOS_S3_ACCESS_KEY:}
+      secret-key: ${MOMENTOS_S3_SECRET_KEY:}
+      path-style-access: ${MOMENTOS_S3_PATH_STYLE:true}
+  media:
+    # Limites de upload, configuráveis; o multipart do servidor acompanha o maior deles.
+    max-image-size: ${MOMENTOS_MAX_IMAGE_SIZE:25MB}
+    max-video-size: ${MOMENTOS_MAX_VIDEO_SIZE:200MB}
+    thumbnail-width: 640
+    # ffmpeg é opcional: sem ele o vídeo é guardado como veio, sem miniatura.
+    ffmpeg-path: ${MOMENTOS_FFMPEG_PATH:ffmpeg}
+    compress-video: ${MOMENTOS_COMPRESS_VIDEO:true}
 
 management:
   endpoints:

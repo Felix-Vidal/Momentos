@@ -44,7 +44,7 @@ public abstract class ApiTest {
     }
 
     protected void cleanDatabase() {
-        jdbc.execute("truncate table users, groups cascade");
+        jdbc.execute("truncate table users, groups, media cascade");
     }
 
     /** Cria um grupo e devolve seu id; o criador vira administrador. */

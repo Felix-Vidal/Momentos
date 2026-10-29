@@ -22,6 +22,9 @@
         <springdoc.version>3.2.0</springdoc.version>
         <testcontainers.version>2.0.5</testcontainers.version>
         <jjwt.version>0.13.0</jjwt.version>
+        <awssdk.version>2.57.6</awssdk.version>
+        <metadata-extractor.version>2.22.0</metadata-extractor.version>
+        <thumbnailator.version>0.4.21</thumbnailator.version>
     </properties>
 
     <dependencies>
@@ -83,6 +86,23 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Processamento de mídia -->
+        <dependency>
+            <groupId>com.drewnoakes</groupId>
+            <artifactId>metadata-extractor</artifactId>
+            <version>${metadata-extractor.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.coobird</groupId>
+            <artifactId>thumbnailator</artifactId>
+            <version>${thumbnailator.version}</version>
+        </dependency>
+        <!-- Armazenamento S3 (qualquer serviço compatível) -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -112,6 +132,13 @@
 
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>bom</artifactId>
+                <version>${awssdk.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
             <dependency>
                 <groupId>org.testcontainers</groupId>
                 <artifactId>testcontainers-bom</artifactId>
