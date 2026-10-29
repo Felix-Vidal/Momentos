@@ -11,10 +11,10 @@ mas a plataforma é genérica: qualquer pessoa cria um grupo.
 | Camada | Tecnologias |
 |---|---|
 | Backend | Java 25, Spring Boot 4.1, Spring Security 7 (JWT), Spring Data JPA, Flyway, PostgreSQL 18, WebSocket STOMP |
-| Mídia | metadata-extractor (EXIF), Thumbnailator (miniaturas), FFmpeg (vídeo, opcional), MinIO/S3 |
+| Mídia | metadata-extractor (EXIF), Thumbnailator (miniaturas), FFmpeg (vídeo, opcional), disco local ou S3 (AWS SDK v2) |
 | Frontend | Angular 22 (standalone + signals, zoneless), Tailwind CSS 4, `motion`, `@stomp/stompjs` |
 | Testes | JUnit 6, Mockito, Testcontainers 2 (backend); Vitest (frontend) |
-| Infra | Docker Compose (PostgreSQL + MinIO + backend) |
+| Infra | Docker Compose (PostgreSQL + backend) |
 
 ## Pré-requisitos
 
@@ -32,7 +32,7 @@ cp .env.example .env                 # ajuste se quiser
 
 # 1) infraestrutura (o PostgreSQL do container escuta na 5433,
 #    para não conflitar com um PostgreSQL instalado na máquina)
-docker compose up -d postgres minio
+docker compose up -d postgres
 
 # 2) backend (http://localhost:8080, Swagger em /swagger-ui.html)
 cd backend && ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev

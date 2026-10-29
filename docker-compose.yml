@@ -21,24 +21,6 @@ services:
       timeout: 5s
       retries: 10
 
-  minio:
-    image: minio/minio:latest
-    container_name: momentos-minio
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-momentos}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-momentos123}
-    ports:
-      - "${MINIO_PORT:-9000}:9000"
-      - "${MINIO_CONSOLE_PORT:-9001}:9001"   # console web: http://localhost:9001
-    volumes:
-      - momentos-minio-data:/data
-    healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
   backend:
     build:
       context: ./backend
@@ -46,20 +28,20 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      minio:
-        condition: service_started
     environment:
       SPRING_PROFILES_ACTIVE: docker
       POSTGRES_USER: ${POSTGRES_USER:-momentos}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-momentos}
-      MOMENTOS_STORAGE_TYPE: minio
-      MOMENTOS_MINIO_ENDPOINT: http://minio:9000
-      MOMENTOS_MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-momentos}
-      MOMENTOS_MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-momentos123}
+      # Em dev o armazenamento é em disco; em produção troca-se para "s3"
+      # (qualquer serviço compatível: R2, Backblaze, AWS, Wasabi).
+      MOMENTOS_STORAGE_TYPE: local
+      MOMENTOS_STORAGE_LOCAL_PATH: /app/storage
       MOMENTOS_CORS_ORIGINS: http://localhost:4200
     ports:
       - "${MOMENTOS_PORT:-8080}:8080"
+    volumes:
+      - momentos-storage:/app/storage
 
 volumes:
   momentos-postgres-data:
-  momentos-minio-data:
+  momentos-storage:
