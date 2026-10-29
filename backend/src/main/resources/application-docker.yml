@@ -1,0 +1,10 @@
+# Perfil usado quando o próprio backend roda dentro do docker-compose.
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres:5432/momentos
+    username: ${POSTGRES_USER:momentos}
+    password: ${POSTGRES_PASSWORD:momentos}
+
+momentos:
+  seed:
+    enabled: ${MOMENTOS_SEED_ENABLED:false}

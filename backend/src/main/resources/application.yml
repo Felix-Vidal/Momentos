@@ -1,0 +1,52 @@
+spring:
+  application:
+    name: momentos
+  profiles:
+    default: dev
+  threads:
+    virtual:
+      enabled: true          # Java 25: requisições em virtual threads
+  datasource:
+    url: ${MOMENTOS_DB_URL:jdbc:postgresql://localhost:5432/momentos}
+    username: ${MOMENTOS_DB_USER:momentos}
+    password: ${MOMENTOS_DB_PASSWORD:momentos}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate     # o schema é responsabilidade exclusiva do Flyway
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  servlet:
+    multipart:
+      max-file-size: ${MOMENTOS_MAX_FILE_SIZE:200MB}
+      max-request-size: ${MOMENTOS_MAX_REQUEST_SIZE:600MB}
+  jackson:
+    default-property-inclusion: non_null
+
+server:
+  port: ${MOMENTOS_PORT:8080}
+  error:
+    include-message: never
+
+momentos:
+  cors:
+    allowed-origins: ${MOMENTOS_CORS_ORIGINS:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    app.momentos: INFO

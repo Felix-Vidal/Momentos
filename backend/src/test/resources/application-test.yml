@@ -1,0 +1,8 @@
+# Perfil de teste: o Testcontainers injeta a conexão, o seed fica desligado.
+momentos:
+  seed:
+    enabled: false
+logging:
+  level:
+    org.testcontainers: WARN
+    app.momentos: INFO

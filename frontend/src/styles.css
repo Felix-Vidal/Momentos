@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+/*
+ * Identidade visual do Momentos.
+ * Tema escuro por padrão: fotos e vídeos aparecem melhor sobre fundo profundo,
+ * e o efeito de vidro da caixa de comentários ganha contraste.
+ */
+@theme {
+  --color-fundo: #0c0a14;
+  --color-fundo-suave: #15121f;
+  --color-superficie: #1d1829;
+  --color-borda: #2e2740;
+
+  --color-texto: #f4f1fb;
+  --color-texto-suave: #b7aed0;
+  --color-texto-fraco: #7e759a;
+
+  --color-marca: #a855f7;
+  --color-marca-forte: #7c3aed;
+  --color-marca-suave: #c99cff;
+  --color-destaque: #f5b53f;
+  --color-sucesso: #34d399;
+  --color-perigo: #f43f5e;
+
+  --font-display: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  --radius-caixa: 1.25rem;
+
+  --shadow-vidro: 0 18px 50px -12px rgb(0 0 0 / 0.65);
+  --shadow-realce: 0 0 0 1px rgb(255 255 255 / 0.08), 0 20px 45px -20px rgb(168 85 247 / 0.45);
+
+  --ease-suave: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-fundo text-texto font-sans antialiased;
+    margin: 0;
+    min-height: 100dvh;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-display tracking-tight;
+  }
+
+  /* Respeita quem prefere menos movimento: as animações viram transições instantâneas. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@utility vidro {
+  /* Base do "glassmorphism" usado na caixa de comentários e nos cabeçalhos flutuantes. */
+  background-color: color-mix(in oklab, var(--color-fundo-suave) 72%, transparent);
+  backdrop-filter: blur(18px) saturate(140%);
+  border: 1px solid color-mix(in oklab, white 10%, transparent);
+  box-shadow: var(--shadow-vidro);
+}

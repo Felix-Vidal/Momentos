@@ -1,0 +1,18 @@
+# Perfil de desenvolvimento: banco e MinIO do docker-compose, seed de demonstração ligado.
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/momentos
+    username: momentos
+    password: momentos
+  jpa:
+    show-sql: false
+
+momentos:
+  cors:
+    allowed-origins: http://localhost:4200
+  seed:
+    enabled: true
+
+logging:
+  level:
+    app.momentos: DEBUG

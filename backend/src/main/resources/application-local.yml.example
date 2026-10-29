@@ -1,0 +1,7 @@
+# Copie para application-local.yml (ignorado pelo git) e rode com --spring.profiles.active=dev,local
+# para apontar o backend ao PostgreSQL instalado na máquina em vez do container.
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/momentos
+    username: SEU_USUARIO
+    password: SUA_SENHA
