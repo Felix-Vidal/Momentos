@@ -1,12 +1,15 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { MediaView } from '../../core/api/media.models';
 import { MomentBlock, MomentView } from '../../core/api/timeline.models';
+import { StompService } from '../../core/realtime/stomp.service';
 import { formatDay } from '../../core/util/date.util';
 import { injectGroup } from '../groups/group-context';
 import { MediaService } from '../media/media.service';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { Spinner } from '../../shared/ui/spinner';
 import { ToastService } from '../../shared/ui/toast.service';
+import { Lightbox } from '../media/lightbox';
+import { MomentCommentsDialog } from '../comments/moment-comments.dialog';
 import { CreateMomentDialog } from './create-moment.dialog';
 import { DateNav } from './date-nav';
 import { MediaCard } from './media-card';
@@ -26,6 +29,8 @@ import { TimelineStore } from './timeline.store';
     MomentSection,
     DateNav,
     CreateMomentDialog,
+    MomentCommentsDialog,
+    Lightbox,
     EmptyState,
     Spinner,
   ],
@@ -59,7 +64,7 @@ import { TimelineStore } from './timeline.store';
       }
 
       <ol class="flex flex-col gap-10">
-        @for (entry of store.entries(); track entry.kind + (entry.moment?.moment.id ?? entry.media?.id)) {
+        @for (entry of store.entries(); track entry.kind + (entry.moment?.moment.id ?? entry.media?.media.id)) {
           <li class="flex flex-col gap-3">
             @if (entry.kind === 'MOMENT' && entry.moment) {
               <app-moment-section
@@ -67,12 +72,13 @@ import { TimelineStore } from './timeline.store';
                 [isAdmin]="isAdmin()"
                 (edit)="startEditing($event)"
                 (remove)="confirmRemove($event)"
+                (openComments)="openMomentComments($event)"
               >
                 <span slot="title">{{ entry.moment.moment.title }}</span>
 
                 <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  @for (media of entry.moment.media; track media.id) {
-                    <app-media-card [media]="media" (opened)="openMedia($event)" />
+                  @for (item of entry.moment.media; track item.media.id) {
+                    <app-media-card [item]="item" (opened)="openMedia($event)" />
                   }
                 </div>
               </app-moment-section>
@@ -80,7 +86,7 @@ import { TimelineStore } from './timeline.store';
               <div class="flex flex-col gap-2">
                 <p class="text-xs tracking-wide text-faint uppercase">{{ day(entry.at) }}</p>
                 <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  <app-media-card [media]="entry.media" (opened)="openMedia($event)" />
+                  <app-media-card [item]="entry.media" (opened)="openMedia($event)" />
                 </div>
               </div>
             }
@@ -107,6 +113,23 @@ import { TimelineStore } from './timeline.store';
           (saved)="stopCreating()"
         />
       }
+
+      @if (viewing(); as media) {
+        <app-lightbox
+          [media]="media"
+          [groupId]="groupId()!"
+          (closed)="viewing.set(null)"
+          (changed)="store.reload()"
+        />
+      }
+
+      @if (momentComments(); as moment) {
+        <app-moment-comments-dialog
+          [moment]="moment"
+          (closed)="momentComments.set(null)"
+          (changed)="store.reload()"
+        />
+      }
     </div>
   `,
 })
@@ -116,11 +139,19 @@ export class TimelinePage {
   private readonly toast = inject(ToastService);
   private readonly context = injectGroup();
 
+  private readonly stomp = inject(StompService);
+
   protected readonly creating = signal(false);
   protected readonly editingMoment = signal<MomentView | null>(null);
+  protected readonly viewing = signal<MediaView | null>(null);
+  protected readonly momentComments = signal<MomentView | null>(null);
   protected readonly isAdmin = computed(() => this.context.group.value()?.myRole === 'ADMIN');
+  protected readonly groupId = this.context.groupId;
 
   protected readonly day = formatDay;
+
+  /** Recarregamento agrupado: várias mensagens seguidas viram uma recarga só. */
+  private reloadTimer?: ReturnType<typeof setTimeout>;
 
   constructor() {
     // Abre a linha do tempo quando o grupo chega e recarrega quando entram mídias novas.
@@ -131,6 +162,21 @@ export class TimelinePage {
         void this.store.open(groupId);
       }
     });
+
+    // Comentário novo de qualquer pessoa aparece sem recarregar a página.
+    effect((onCleanup) => {
+      const groupId = this.context.groupId();
+      if (!groupId) {
+        return;
+      }
+      const subscription = this.stomp.comments(groupId).subscribe(() => this.scheduleReload());
+      onCleanup(() => subscription.unsubscribe());
+    });
+  }
+
+  private scheduleReload(): void {
+    clearTimeout(this.reloadTimer);
+    this.reloadTimer = setTimeout(() => void this.store.reload(), 400);
   }
 
   protected startCreating(): void {
@@ -158,7 +204,10 @@ export class TimelinePage {
   }
 
   protected openMedia(media: MediaView): void {
-    // O lightbox entra junto com os comentários, na etapa seguinte.
-    this.toast.info(`Visualização em tela cheia de ${media.owner.name} chega com os comentários.`);
+    this.viewing.set(media);
+  }
+
+  protected openMomentComments(block: MomentBlock): void {
+    this.momentComments.set(block.moment);
   }
 }

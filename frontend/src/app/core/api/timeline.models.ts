@@ -28,10 +28,19 @@ export interface CommentView {
   mediaThumbnail: string | null;
 }
 
+/** Mídia na linha do tempo, com a conversa que ela já tem. */
+export interface TimelineMedia {
+  media: MediaView;
+  commentCount: number;
+  /** Amostra suficiente para a caixa animada girar sem outra chamada. */
+  comments: CommentView[];
+}
+
 export interface MomentBlock {
   moment: MomentView;
-  media: MediaView[];
+  media: TimelineMedia[];
   commentCount: number;
+  /** Comentários do conjunto: do Momento e de todas as suas mídias. */
   commentFeed: CommentView[];
 }
 
@@ -39,7 +48,7 @@ export interface TimelineEntry {
   kind: 'MOMENT' | 'MEDIA';
   at: string;
   moment: MomentBlock | null;
-  media: MediaView | null;
+  media: TimelineMedia | null;
 }
 
 export interface TimelineCalendar {

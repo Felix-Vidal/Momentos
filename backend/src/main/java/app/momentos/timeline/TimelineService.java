@@ -1,6 +1,7 @@
 package app.momentos.timeline;
 
 import app.momentos.common.web.CursorPage;
+import app.momentos.groups.GroupMember;
 import app.momentos.media.Media;
 import app.momentos.media.MediaRepository;
 import app.momentos.media.MediaService;
@@ -19,7 +20,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.springframework.data.domain.PageRequest;
@@ -40,20 +40,23 @@ public class TimelineService {
     private final MediaService mediaService;
     private final TimelineAssembler assembler;
     private final GroupAccessGuard access;
+    private final TimelineComments comments;
 
     public TimelineService(MediaRepository media, MomentRepository moments,
-            MediaService mediaService, TimelineAssembler assembler, GroupAccessGuard access) {
+            MediaService mediaService, TimelineAssembler assembler, GroupAccessGuard access,
+            TimelineComments comments) {
         this.media = media;
         this.moments = moments;
         this.mediaService = mediaService;
         this.assembler = assembler;
         this.access = access;
+        this.comments = comments;
     }
 
     @Transactional(readOnly = true)
     public CursorPage<TimelineEntry> load(UUID groupId, UUID userId, Instant from, Instant to,
-            String cursor, int limit, Function<Moment, Long> commentCountOf) {
-        access.requireMember(groupId, userId);
+            String cursor, int limit) {
+        GroupMember me = access.requireMember(groupId, userId);
 
         Cursor position = Cursor.decode(cursor);
         Instant start = from == null ? INICIO_DOS_TEMPOS : from;
@@ -74,8 +77,8 @@ public class TimelineService {
         List<Moment> relevantMoments = moments.findByGroupIdOrderByStartsAt(groupId);
         Map<UUID, UserSummary> owners = ownersOf(page, relevantMoments);
 
-        List<TimelineEntry> entries = assembler.assemble(page, relevantMoments, owners,
-                commentCountOf, windowStart, windowEnd);
+        List<TimelineEntry> entries = assembler.assemble(groupId, page, relevantMoments, owners,
+                comments, userId, me.getRole(), windowStart, windowEnd);
 
         if (!hasMore) {
             return CursorPage.last(entries);

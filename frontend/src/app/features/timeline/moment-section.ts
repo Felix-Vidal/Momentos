@@ -1,19 +1,25 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { MediaView } from '../../core/api/media.models';
 import { MomentBlock } from '../../core/api/timeline.models';
 import { AuthService } from '../../core/auth/auth.service';
 import { formatInterval } from '../../core/util/date.util';
+import { CommentCarousel } from '../comments/comment-carousel';
+import { HoverOrTapDirective } from '../../shared/directives/hover-or-tap.directive';
 import { InViewDirective } from '../../shared/directives/in-view.directive';
 
 /**
  * Bloco de um Momento na linha do tempo: o título, o intervalo e as mídias que
- * caíram nele. O conteúdo projetado traz os cartões de mídia e a caixa de
- * comentários do título.
+ * caíram nele.
+ *
+ * <p>No hover do título (ou no primeiro toque, no celular) a caixa de comentários
+ * aparece abaixo dele e percorre o conjunto inteiro — o que foi dito no Momento e
+ * em cada uma das suas mídias, cada comentário com a miniatura da foto a que se
+ * refere.
  */
 @Component({
   selector: 'app-moment-section',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [InViewDirective],
+  imports: [InViewDirective, HoverOrTapDirective, CommentCarousel],
   template: `
     <section
       appInView
@@ -24,12 +30,35 @@ import { InViewDirective } from '../../shared/directives/in-view.directive';
       <header class="relative flex flex-wrap items-end justify-between gap-2">
         <div class="relative flex min-w-0 flex-col gap-1">
           <!-- O título é o gatilho da caixa de comentários do conjunto. -->
-          <h2 class="relative inline-flex w-fit items-center gap-2 font-display text-xl">
+          <h2 class="relative w-fit font-display text-xl">
             <span
-              class="h-5 w-1 rounded-full bg-gradient-to-b from-brand to-accent"
-              aria-hidden="true"
-            ></span>
-            <ng-content select="[slot=title]" />
+              appHoverOrTap
+              #titleTrigger="hoverOrTap"
+              tabindex="0"
+              class="relative inline-flex cursor-pointer items-center gap-2 rounded-lg outline-none
+                     transition hover:text-brand-soft focus-visible:ring-2 focus-visible:ring-brand"
+              [attr.aria-label]="
+                'Ver comentários de ' + block().moment.title + ' (' + block().commentCount + ')'
+              "
+              (confirmed)="openComments.emit(block())"
+            >
+              <span
+                class="h-5 w-1 rounded-full bg-gradient-to-b from-brand to-accent"
+                aria-hidden="true"
+              ></span>
+              <ng-content select="[slot=title]" />
+              @if (block().commentCount > 0) {
+                <span class="text-xs text-faint">{{ block().commentCount }} 💬</span>
+              }
+            </span>
+
+            <app-comment-carousel
+              placement="below"
+              [comments]="block().commentFeed"
+              [visible]="titleTrigger.isActive()"
+              [showMediaThumbnail]="true"
+              emptyMessage="Nenhum comentário neste momento ainda"
+            />
           </h2>
           <p class="text-xs text-faint">
             {{ interval() }}
@@ -81,6 +110,8 @@ export class MomentSection {
   readonly edit = output<MomentBlock>();
   readonly remove = output<MomentBlock>();
   readonly openMedia = output<MediaView>();
+  /** Clique (ou segundo toque) no título: abrir a conversa completa do Momento. */
+  readonly openComments = output<MomentBlock>();
 
   private readonly auth = inject(AuthService);
 

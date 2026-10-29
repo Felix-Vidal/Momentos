@@ -276,12 +276,23 @@ class TimelineIT extends ApiTest {
     record TimelinePayload(List<EntryPayload> items, String nextCursor, boolean hasMore) {
     }
 
-    record EntryPayload(String kind, String at, BlockPayload moment, MediaPayload media) {
+    record EntryPayload(String kind, String at, BlockPayload moment, TimelineMediaPayload media) {
     }
 
-    record BlockPayload(MomentResponse moment, List<MediaPayload> media, long commentCount) {
+    record BlockPayload(MomentResponse moment, List<TimelineMediaPayload> media,
+            long commentCount, List<CommentPayload> commentFeed) {
+    }
+
+    record TimelineMediaPayload(MediaPayload media, long commentCount,
+            List<CommentPayload> comments) {
     }
 
     record MediaPayload(String id, String type, String capturedAt) {
+    }
+
+    record CommentPayload(String id, String body, AuthorPayload author, String mediaThumbnail) {
+    }
+
+    record AuthorPayload(String id, String name) {
     }
 }

@@ -40,6 +40,8 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/ping",
                                 "/api/auth/**",
+                                // O handshake do WebSocket é autenticado no CONNECT do STOMP.
+                                "/ws/**",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",

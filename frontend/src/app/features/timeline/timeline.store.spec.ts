@@ -11,7 +11,12 @@ const emptyCalendar = { months: [], total: 0 };
 const emptyPage = { items: [], nextCursor: null, hasMore: false };
 
 function mediaEntry(id: string, at: string) {
-  return { kind: 'MEDIA' as const, at, moment: null, media: { id, capturedAt: at } };
+  return {
+    kind: 'MEDIA' as const,
+    at,
+    moment: null,
+    media: { media: { id, capturedAt: at }, commentCount: 0, comments: [] },
+  };
 }
 
 describe('TimelineStore', () => {
@@ -83,7 +88,7 @@ describe('TimelineStore', () => {
 
     const timelineRequest = seen.find((r) => r.request.url.includes('/timeline'))!;
     expect(timelineRequest.request.params.get('cursor')).toBe('cursor-1');
-    expect(store.entries().map((e) => e.media?.id)).toEqual(['m1', 'm2']);
+    expect(store.entries().map((e) => e.media?.media.id)).toEqual(['m1', 'm2']);
     expect(store.hasMore()).toBe(false);
   });
 

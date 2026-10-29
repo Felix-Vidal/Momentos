@@ -1,7 +1,6 @@
 package app.momentos.timeline;
 
 import app.momentos.common.web.CursorPage;
-import app.momentos.moments.Moment;
 import app.momentos.security.CurrentUser;
 import app.momentos.timeline.dto.TimelineCalendar;
 import app.momentos.timeline.dto.TimelineEntry;
@@ -11,7 +10,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.UUID;
-import java.util.function.Function;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,12 +23,9 @@ import org.springframework.web.bind.annotation.RestController;
 public class TimelineController {
 
     private final TimelineService timeline;
-    private final Function<Moment, Long> commentCounter;
 
-    public TimelineController(TimelineService timeline,
-            app.momentos.comments.CommentCounter commentCounter) {
+    public TimelineController(TimelineService timeline) {
         this.timeline = timeline;
-        this.commentCounter = commentCounter::countForMoment;
     }
 
     @GetMapping
@@ -42,8 +37,7 @@ public class TimelineController {
             @RequestParam(required = false) Instant to,
             @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "24") int limit) {
-        return timeline.load(groupId, me.id(), from, to, cursor, Math.min(limit, 100),
-                commentCounter);
+        return timeline.load(groupId, me.id(), from, to, cursor, Math.min(limit, 100));
     }
 
     @GetMapping("/day/{date}")
@@ -55,8 +49,7 @@ public class TimelineController {
             @RequestParam(defaultValue = "UTC") String timeZone,
             @RequestParam(defaultValue = "100") int limit) {
         Instant[] range = TimelineService.dayRange(date, zoneOf(timeZone));
-        return timeline.load(groupId, me.id(), range[0], range[1], null, Math.min(limit, 200),
-                commentCounter);
+        return timeline.load(groupId, me.id(), range[0], range[1], null, Math.min(limit, 200));
     }
 
     @GetMapping("/calendar")
