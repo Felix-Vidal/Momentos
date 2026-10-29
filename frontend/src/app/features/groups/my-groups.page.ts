@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, resource } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { GroupsService } from './groups.service';
+import { InvitesService } from '../invites/invites.service';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { Spinner } from '../../shared/ui/spinner';
 
@@ -21,6 +22,25 @@ import { Spinner } from '../../shared/ui/spinner';
                  hover:bg-brand-soft active:scale-95"
         >Criar grupo</a>
       </header>
+
+      @if (invites.value()?.length) {
+        <section class="flex flex-col gap-2 rounded-box border border-brand/40 bg-brand/10 p-4">
+          <h2 class="text-sm font-medium">Você tem convite para entrar</h2>
+          <ul class="flex flex-col gap-2">
+            @for (invite of invites.value(); track invite.id) {
+              <li class="flex items-center justify-between gap-3 rounded-xl bg-surface/50 p-3">
+                <span class="text-sm text-muted">
+                  Convite como
+                  {{ invite.role === 'ADMIN' ? 'administrador' : 'integrante' }}
+                </span>
+                <span class="text-xs text-faint">
+                  Use o link que você recebeu para aceitar
+                </span>
+              </li>
+            }
+          </ul>
+        </section>
+      }
 
       @if (groups.isLoading()) {
         <app-spinner label="Buscando seus grupos…" />
@@ -83,10 +103,16 @@ import { Spinner } from '../../shared/ui/spinner';
 })
 export class MyGroupsPage {
   private readonly service = inject(GroupsService);
+  private readonly invitesService = inject(InvitesService);
 
   // Recarrega sozinho quando algo muda em grupos (criar, sair, trocar papel).
   protected readonly groups = resource({
     params: () => this.service.revision(),
     loader: () => this.service.mine(),
+  });
+
+  protected readonly invites = resource({
+    params: () => this.service.revision(),
+    loader: () => this.invitesService.mine(),
   });
 }

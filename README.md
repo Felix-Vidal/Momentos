@@ -43,6 +43,36 @@ cd frontend && npm install && npm start
 
 Para subir tudo em container, incluindo o backend: `docker compose up -d`.
 
+### Dados de demonstração
+
+No perfil `dev`, o seed cria a **Sociedade da Roleta** na primeira subida (e não repete
+depois): 8 integrantes, 25 mídias geradas localmente, os Momentos **"Corujão da
+LetalCompany"** (13/10 22:00 → 14/10 06:00) e **"Almoço no RU"**, 19 comentários, um
+pedido de entrada aguardando aprovação e um segundo grupo privado para comparar
+visibilidades.
+
+Entre com qualquer um destes e a senha `momentos123`:
+
+| Conta | Papel |
+|---|---|
+| `felix@ufac.br` | administrador |
+| `ana@ufac.br` | administradora |
+| `bruno@ufac.br`, `carla@ufac.br`, `diego@ufac.br`, `eduarda@ufac.br`, `gustavo@ufac.br` | integrantes |
+| `helena@ufac.br` | fora do grupo, com pedido pendente |
+
+Para recomeçar do zero: `docker compose down -v` e apague `backend/storage/`.
+
+### O que olhar primeiro
+
+1. Abra a Sociedade da Roleta e veja a roleta girando no topo.
+2. Role a linha do tempo: as mídias de 13–14/10 aparecem sob "Corujão da LetalCompany".
+3. **Passe o mouse em uma foto** — a caixa de vidro sobe na base e percorre os comentários.
+4. **Passe o mouse no título do Momento** — a mesma caixa percorre a conversa inteira do
+   conjunto, com a miniatura da foto de cada comentário.
+5. Clique para abrir o lightbox com o texto completo e comentar.
+6. No celular (ou DevTools em viewport estreita): o primeiro toque mostra a caixa, o
+   segundo abre o lightbox.
+
 ## Testes
 
 ```bash

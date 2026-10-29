@@ -35,6 +35,20 @@ import { MediaService } from '../media/media.service';
   template: `
     @if (group.isLoading()) {
       <app-spinner label="Abrindo o grupo…" />
+    } @else if (group.error()) {
+      <section class="flex flex-col items-center gap-3 py-16 text-center">
+        <span class="text-4xl" aria-hidden="true">🔒</span>
+        <h1 class="text-xl font-semibold">Este grupo não está disponível para você</h1>
+        <p class="max-w-sm text-sm text-muted">
+          O grupo pode ter sido removido, ou o conteúdo é visível apenas para quem participa.
+          Grupos abertos aceitam pedidos de entrada na página Descobrir.
+        </p>
+        <a
+          routerLink="/descobrir"
+          class="rounded-full border border-line px-5 py-2.5 text-sm text-muted transition
+                 hover:border-brand hover:text-ink"
+        >Ver grupos abertos</a>
+      </section>
     } @else if (group.value(); as g) {
       <section class="flex flex-col gap-6">
         @if (g.theme === 'ROULETTE') {

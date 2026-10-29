@@ -6,6 +6,7 @@ import { formatDay } from '../../core/util/date.util';
 import { injectGroup } from '../groups/group-context';
 import { MediaService } from '../media/media.service';
 import { EmptyState } from '../../shared/ui/empty-state';
+import { MediaSkeleton } from '../../shared/ui/media-skeleton';
 import { Spinner } from '../../shared/ui/spinner';
 import { ToastService } from '../../shared/ui/toast.service';
 import { Lightbox } from '../media/lightbox';
@@ -32,6 +33,7 @@ import { TimelineStore } from './timeline.store';
     MomentCommentsDialog,
     Lightbox,
     EmptyState,
+    MediaSkeleton,
     Spinner,
   ],
   template: `
@@ -51,7 +53,9 @@ import { TimelineStore } from './timeline.store';
         >Criar momento</button>
       </div>
 
-      @if (store.isEmpty()) {
+      @if (store.isLoading() && !store.entries().length) {
+        <app-media-skeleton [count]="6" />
+      } @else if (store.isEmpty()) {
         <app-empty-state
           icon="◷"
           title="A linha do tempo está vazia"
@@ -94,8 +98,8 @@ import { TimelineStore } from './timeline.store';
         }
       </ol>
 
-      @if (store.isLoading()) {
-        <app-spinner label="Carregando a linha do tempo…" />
+      @if (store.isLoading() && store.entries().length) {
+        <app-spinner label="Carregando mais…" />
       } @else if (store.hasMore()) {
         <button
           type="button"

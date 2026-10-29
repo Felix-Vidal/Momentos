@@ -12,6 +12,8 @@ momentos:
     allowed-origins: http://localhost:4200
   seed:
     enabled: true
+    # Todas as contas de demonstração usam esta senha.
+    password: momentos123
 
 logging:
   level:
