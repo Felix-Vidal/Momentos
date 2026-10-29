@@ -46,10 +46,22 @@ Para subir tudo em container, incluindo o backend: `docker compose up -d`.
 ### Dados de demonstração
 
 No perfil `dev`, o seed cria a **Sociedade da Roleta** na primeira subida (e não repete
-depois): 8 integrantes, 25 mídias geradas localmente, os Momentos **"Corujão da
-LetalCompany"** (13/10 22:00 → 14/10 06:00) e **"Almoço no RU"**, 19 comentários, um
-pedido de entrada aguardando aprovação e um segundo grupo privado para comparar
-visibilidades.
+depois): 8 integrantes, ~28 fotos e 3 vídeos gerados localmente, 5 Momentos, 30
+comentários, um pedido de entrada aguardando aprovação e um segundo grupo privado para
+comparar visibilidades.
+
+Os Momentos foram escolhidos para mostrar cada regra da linha do tempo:
+
+| Momento | Intervalo | Para ver |
+|---|---|---|
+| **Corujão da LetalCompany** | 13/10 22:00 → 14/10 06:00 | intervalo que atravessa a meia-noite (10 mídias, 2 vídeos) |
+| **Almoço no RU** | 13/10 11:30 → 14:00 | período do dia (4 mídias, 1 vídeo) |
+| **Semana de provas** | 12/10 → 17/10 | sobreposição: contém os dois acima, mas fica só com as mídias que eles não levaram |
+| **Sábado de maratona** | 18/10, dia inteiro | Momento de dia inteiro |
+| **Churrasco de fim de semestre** | 24/10 12:00 → 20:00 | Momento **sem nenhuma mídia**: o título existe e aceita comentários |
+
+Os vídeos (gerados com ffmpeg) exercitam o player, o selo de duração e a miniatura
+extraída de um quadro. Sem ffmpeg na máquina, o seed simplesmente não cria vídeos.
 
 Entre com qualquer um destes e a senha `momentos123`:
 

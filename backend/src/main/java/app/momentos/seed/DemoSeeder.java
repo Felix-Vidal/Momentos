@@ -17,6 +17,7 @@ import app.momentos.media.MediaGroupShare;
 import app.momentos.media.MediaGroupShareRepository;
 import app.momentos.media.MediaRepository;
 import app.momentos.media.MediaType;
+import app.momentos.media.processing.FfmpegVideoProcessor;
 import app.momentos.media.processing.ImageThumbnailGenerator;
 import app.momentos.moments.Moment;
 import app.momentos.moments.MomentRepository;
@@ -85,13 +86,16 @@ public class DemoSeeder {
         private final StorageService storage;
         private final ImageThumbnailGenerator thumbnails;
         private final PlaceholderImageFactory images;
+        private final PlaceholderVideoFactory videos;
+        private final FfmpegVideoProcessor videoProcessor;
         private final PasswordEncoder passwordEncoder;
 
         Seeder(UserRepository users, GroupRepository groups, GroupMemberRepository members,
                 MediaRepository media, MediaGroupShareRepository shares, MomentRepository moments,
                 CommentRepository comments, JoinRequestRepository joinRequests,
                 StorageService storage, ImageThumbnailGenerator thumbnails,
-                PlaceholderImageFactory images, PasswordEncoder passwordEncoder) {
+                PlaceholderImageFactory images, PlaceholderVideoFactory videos,
+                FfmpegVideoProcessor videoProcessor, PasswordEncoder passwordEncoder) {
             this.users = users;
             this.groups = groups;
             this.members = members;
@@ -103,13 +107,23 @@ public class DemoSeeder {
             this.storage = storage;
             this.thumbnails = thumbnails;
             this.images = images;
+            this.videos = videos;
+            this.videoProcessor = videoProcessor;
             this.passwordEncoder = passwordEncoder;
         }
 
         @Transactional
         void run(String password) {
             if (groups.existsBySlug(GROUP_SLUG)) {
-                log.info("Seed já aplicado: grupo '{}' existe.", GROUP_SLUG);
+                // A base já existe; os extras são aplicados à parte, para quem
+                // atualizou o projeto sem recriar o banco.
+                Group existing = groups.findBySlug(GROUP_SLUG).orElseThrow();
+                List<User> roster = people(password);
+                if (seedExtras(existing, roster)) {
+                    log.info("Seed: conteúdo extra (vídeos e momentos de demonstração) aplicado.");
+                } else {
+                    log.info("Seed já aplicado: grupo '{}' está completo.", GROUP_SLUG);
+                }
                 return;
             }
             log.info("Aplicando seed de demonstração…");
@@ -132,6 +146,7 @@ public class DemoSeeder {
                     "Fui da turma de 2024, posso entrar?"));
 
             seedTimeline(group, people);
+            seedExtras(group, people);
             seedSecondGroup(people, password);
 
             log.info("Seed pronto: entre com {} e a senha '{}'.", owner.getEmail(), password);
@@ -260,6 +275,142 @@ public class DemoSeeder {
                     "A melhor madrugada do curso até agora.", corujao.getId()));
             comments.save(Comment.onMoment(group.getId(), people.get(3).getId(),
                     "Esse é o ritual que deu nome ao grupo.", almoco.getId()));
+        }
+
+        /**
+         * Conteúdo que existe para mostrar as mecânicas da linha do tempo:
+         *
+         * <ul>
+         *   <li>vídeos com miniatura e duração, para ver o player e o selo de duração;</li>
+         *   <li>um Momento longo sobreposto ao Corujão, provando que o recorte mais
+         *       específico ganha as mídias;</li>
+         *   <li>um Momento de dia inteiro e um sem nenhuma mídia;</li>
+         *   <li>uma foto com vários comentários, para a caixa animada girar de verdade.</li>
+         * </ul>
+         *
+         * @return true se algo foi criado agora
+         */
+        private boolean seedExtras(Group group, List<User> people) {
+            boolean jaExiste = moments.findByGroupIdOrderByStartsAt(group.getId()).stream()
+                    .anyMatch(moment -> "Semana de provas".equals(moment.getTitle()));
+            if (jaExiste) {
+                return false;
+            }
+
+            // --- vídeos (exercitam ffmpeg: miniatura, duração e dimensões) ---
+            record Clip(String label, LocalDateTime at, int seconds, int author) {
+            }
+            List<Clip> clips = List.of(
+                    new Clip("A roleta girando em câmera lenta",
+                            LocalDateTime.of(2026, 10, 13, 12, 50), 6, 1),
+                    new Clip("Partida da LetalCompany às 23h58",
+                            LocalDateTime.of(2026, 10, 13, 23, 58), 5, 0),
+                    new Clip("O grito da vitória, 3h47",
+                            LocalDateTime.of(2026, 10, 14, 3, 47), 4, 3));
+
+            List<Media> savedVideos = new ArrayList<>();
+            for (Clip clip : clips) {
+                User author = people.get(clip.author() % people.size());
+                storeVideo(group, author, clip.label(),
+                        clip.at().atZone(ACRE).toInstant(), clip.seconds())
+                        .ifPresent(savedVideos::add);
+            }
+
+            // --- fotos de um sábado, para o Momento de dia inteiro ---
+            List<Media> sabado = new ArrayList<>();
+            sabado.add(storeImage(group, people.get(2), "Maratona de série, episódio 1",
+                    LocalDateTime.of(2026, 10, 18, 14, 10).atZone(ACRE).toInstant(), 1400, 950));
+            sabado.add(storeImage(group, people.get(5), "Pipoca acabou no episódio 4",
+                    LocalDateTime.of(2026, 10, 18, 17, 35).atZone(ACRE).toInstant(), 1200, 1300));
+            Media discussao = storeImage(group, people.get(1), "A discussão sobre o final",
+                    LocalDateTime.of(2026, 10, 18, 22, 5).atZone(ACRE).toInstant(), 1400, 1000);
+            sabado.add(discussao);
+
+            // --- Momentos que demonstram as regras ---
+            // Longo e sobreposto: o Corujão e o Almoço ficam dentro dele, mas, por serem
+            // recortes menores, continuam donos das suas mídias.
+            moments.save(new Moment(group.getId(), "Semana de provas",
+                    "A semana inteira: estudo, almoços no RU e a madrugada de jogo no meio.",
+                    LocalDateTime.of(2026, 10, 12, 0, 0).atZone(ACRE).toInstant(),
+                    LocalDateTime.of(2026, 10, 17, 0, 0).atZone(ACRE).toInstant(),
+                    people.getFirst().getId()));
+
+            moments.save(new Moment(group.getId(), "Sábado de maratona",
+                    "Um dia inteiro, do meio-dia à meia-noite.",
+                    LocalDateTime.of(2026, 10, 18, 0, 0).atZone(ACRE).toInstant(),
+                    LocalDateTime.of(2026, 10, 19, 0, 0).atZone(ACRE).toInstant(),
+                    people.get(2).getId()));
+
+            // Momento sem nenhuma mídia: o título existe e aceita comentários.
+            Moment churrasco = moments.save(new Moment(group.getId(),
+                    "Churrasco de fim de semestre",
+                    "Ninguém tirou foto. Alguém tem alguma?",
+                    LocalDateTime.of(2026, 10, 24, 12, 0).atZone(ACRE).toInstant(),
+                    LocalDateTime.of(2026, 10, 24, 20, 0).atZone(ACRE).toInstant(),
+                    people.get(4).getId()));
+            comments.save(Comment.onMoment(group.getId(), people.get(6).getId(),
+                    "Eu jurava que tinha gravado o momento da roleta aqui", churrasco.getId()));
+            comments.save(Comment.onMoment(group.getId(), people.get(2).getId(),
+                    "Procurei no celular e não achei nada. Perdemos esse.", churrasco.getId()));
+
+            // --- conversa: uma foto com muitos comentários, para o carrossel girar ---
+            record Said(String author, String body) {
+            }
+            List<Said> conversa = List.of(
+                    new Said("1", "Essa discussão durou mais que o episódio"),
+                    new Said("2", "Ainda acho que o final faz sentido"),
+                    new Said("3", "Não faz, e eu posso provar com um diagrama"),
+                    new Said("4", "Ele realmente desenhou um diagrama"),
+                    new Said("5", "E a gente continuou discutindo até às duas da manhã"),
+                    new Said("6", "Melhor sábado do semestre, de longe"));
+            for (Said said : conversa) {
+                comments.save(Comment.onMedia(group.getId(),
+                        people.get(Integer.parseInt(said.author()) % people.size()).getId(),
+                        said.body(), discussao.getId()));
+            }
+
+            // Comentários nos vídeos, para a caixa aparecer sobre o player também.
+            if (savedVideos.size() >= 2) {
+                comments.save(Comment.onMedia(group.getId(), people.get(3).getId(),
+                        "Repare na mão dele segurando a roleta", savedVideos.getFirst().getId()));
+                comments.save(Comment.onMedia(group.getId(), people.get(5).getId(),
+                        "Câmera lenta foi exagero, mas valeu", savedVideos.getFirst().getId()));
+                comments.save(Comment.onMedia(group.getId(), people.get(0).getId(),
+                        "Quatro segundos que resumem oito horas", savedVideos.getLast().getId()));
+            }
+            return true;
+        }
+
+        private java.util.Optional<Media> storeVideo(Group group, User author, String label,
+                Instant capturedAt, int seconds) {
+            var generated = videos.create(label, capturedAt, ACRE, seconds);
+            if (generated.isEmpty()) {
+                log.info("Sem ffmpeg: vídeo de demonstração '{}' não foi criado.", label);
+                return java.util.Optional.empty();
+            }
+            var processed = videoProcessor.process(generated.get(), ".mp4");
+            byte[] bytes = processed.compressed().orElse(generated.get());
+
+            UUID id = UUID.randomUUID();
+            String key = "media/seed/" + id + ".mp4";
+            storage.store(key, new ByteArrayInputStream(bytes), bytes.length, "video/mp4");
+
+            Media entity = new Media(author.getId(), MediaType.VIDEO, key, "video/mp4",
+                    bytes.length, capturedAt, CapturedAtSource.EXIF);
+            entity.setCaption(label);
+            entity.setWidth(1280);
+            entity.setHeight(720);
+            processed.duration().ifPresent(entity::setDurationSeconds);
+            processed.thumbnail().ifPresent(thumbnail -> {
+                String thumbnailKey = "thumbs/seed/" + id + ".jpg";
+                storage.store(thumbnailKey, new ByteArrayInputStream(thumbnail),
+                        thumbnail.length, "image/jpeg");
+                entity.setThumbnailKey(thumbnailKey);
+            });
+
+            Media saved = media.save(entity);
+            shares.save(new MediaGroupShare(saved.getId(), group.getId(), author.getId()));
+            return java.util.Optional.of(saved);
         }
 
         /** Um segundo grupo, privado e pequeno, para a visibilidade ficar visível. */
